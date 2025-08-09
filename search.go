@@ -489,7 +489,7 @@ func NegamaxRoot(board dragontoothmg.Board, depth int, alpha int, beta int, star
 		promotion := move.Promote() != dragontoothmg.Nothing
 
 		unapply_func := PushMove(&board, move)
-		if move_index <= 4 || capture || promotion {
+		if move_index <= 8 || capture || promotion {
 			value = -Negamax(&board, depth-1, -color, -beta, -alpha, 1, move_index == 0, 0)
 		} else {
 			reduction := LMRTable[depth][move_index] - 1
