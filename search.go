@@ -302,10 +302,10 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 		// }
 	}
 
-	// tt_is_capture := false
-	// if in_tt && dragontoothmg.IsCapture(tt_entry.BestMove, board) {
-	// 	tt_is_capture = true
-	// }
+	tt_is_capture := false
+	if in_tt && dragontoothmg.IsCapture(tt_entry.BestMove, board) {
+		tt_is_capture = true
+	}
 
 	// Check Extension
 	if in_check && num_ext < 4 {
@@ -332,6 +332,13 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 
 		capture := dragontoothmg.IsCapture(move, board)
 		promotion := move.Promote() != dragontoothmg.Nothing
+		killer := move == KillerMoves[ply][0] || move == KillerMoves[ply][1]
+
+		side_to_move := 0
+		if board.Wtomove {
+			side_to_move = 1
+		}
+		history := HistoryTable[side_to_move][move.From()][move.To()]
 
 		// Used for futility pruning, so it takes into account the "lateness" of the move
 		// lmr_depth := max(1, depth-LMRTable[depth][move_index])
@@ -373,9 +380,18 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 				reduction--
 			}
 
-			// if tt_is_capture {
-			// 	reduction++
-			// }
+			if killer {
+				reduction--
+			}
+
+			// Ajust quiet moves based on history
+			if !(capture || promotion) {
+				reduction -= max(-2, min(2, history/400))
+			}
+
+			if tt_is_capture {
+				reduction++
+			}
 
 			reduction = max(1, min(reduction, depth-1))
 
@@ -406,11 +422,6 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 			if !capture && !promotion {
 
 				// History Heuristic
-
-				side_to_move := 0
-				if board.Wtomove {
-					side_to_move = 1
-				}
 
 				depth_float := float32(depth)
 				bonus := int(1.56*depth_float*depth_float+0.91*depth_float+0.62) * 2
