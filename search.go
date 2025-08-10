@@ -362,7 +362,7 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 
 		// Principal Variation Search + Late Move Reductions
 		unapply_func := PushMove(board, move)
-		if move_index == 0 || depth < 3 {
+		if move_index == 0 {
 			if move_index == 0 && in_pv {
 				in_pv = true
 			} else {
@@ -394,6 +394,10 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 			}
 
 			reduction = max(1, min(reduction, depth-1))
+
+			if depth <= 2 {
+				reduction = 1
+			}
 
 			// if move_index >= 5 {
 			// 	reduction++
