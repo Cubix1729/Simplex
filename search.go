@@ -255,7 +255,7 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 
 	tt_entry, in_tt := GetTT(int(board_hash))
 	// TT cutoff
-	if in_tt && tt_entry.Depth >= depth {
+	if in_tt && tt_entry.Depth >= depth && RepetitionTable[int(board_hash)] < 2 {
 		if tt_entry.Bound == Exact ||
 			(tt_entry.Bound == Lower && tt_entry.Score >= beta) ||
 			(tt_entry.Bound == Upper && tt_entry.Score <= alpha) {
