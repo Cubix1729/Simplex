@@ -494,10 +494,6 @@ func NegamaxRoot(board dragontoothmg.Board, depth int, alpha int, beta int, star
 	legal_moves := OrderMoves(&board, board.GenerateLegalMoves(), 0)
 
 	for move_index, move := range legal_moves {
-		if time.Since(start_time).Seconds() >= time_allowed && depth > 1 {
-			break // timeout
-		}
-
 		var value int
 
 		capture := dragontoothmg.IsCapture(move, &board)
@@ -577,9 +573,6 @@ func AspirationSearch(board dragontoothmg.Board, depth int, last_score int, star
 		} else {
 			completed = true
 			break
-		}
-		if time.Since(start_time).Seconds() >= time_allowed {
-			return move, score
 		}
 	}
 	if !completed {
