@@ -117,11 +117,6 @@ func MoveScore(board *dragontoothmg.Board, move dragontoothmg.Move, ply int, tt_
 	return score
 }
 
-type ScoredMove struct {
-	Move  dragontoothmg.Move
-	Score int
-}
-
 func OrderMoves(board *dragontoothmg.Board, moves []dragontoothmg.Move, ply int) []dragontoothmg.Move {
 	tt_entry, in_tt := GetTT(int(board.Hash()))
 
@@ -129,6 +124,34 @@ func OrderMoves(board *dragontoothmg.Board, moves []dragontoothmg.Move, ply int)
 		moves,
 		func(a, b dragontoothmg.Move) int {
 			return MoveScore(board, b, ply, tt_entry, in_tt) - MoveScore(board, a, ply, tt_entry, in_tt)
+		})
+	return moves
+}
+
+func MoveScoreQS(board *dragontoothmg.Board, move dragontoothmg.Move) int {
+	score := 0
+	if dragontoothmg.IsCapture(move, board) {
+		victim, _ := dragontoothmg.GetPieceType(move.To(), board)
+		attacker, _ := dragontoothmg.GetPieceType(move.From(), board)
+		score += MG_PIECE_VALUES[victim]
+		if board.UnderDirectAttack(board.Wtomove, move.To()) {
+			score -= MG_PIECE_VALUES[attacker] / 10
+		} // Bonus for free pieces
+	}
+
+	if move.Promote() != dragontoothmg.Nothing {
+		score += MG_PIECE_VALUES[int(move.Promote())]
+	}
+
+	return score
+}
+
+// Move ordering for quiescence search
+func OrderMovesQS(board *dragontoothmg.Board, moves []dragontoothmg.Move) []dragontoothmg.Move {
+	slices.SortFunc(
+		moves,
+		func(a, b dragontoothmg.Move) int {
+			return MoveScoreQS(board, b) - MoveScoreQS(board, a)
 		})
 	return moves
 }
@@ -185,7 +208,7 @@ func Quiescence(board *dragontoothmg.Board, depth int, color int, alpha int, bet
 		alpha = stand_pat
 	}
 
-	legal_moves = OrderMoves(board, legal_moves, 0)
+	legal_moves = OrderMovesQS(board, legal_moves)
 
 	max_val := stand_pat
 
@@ -194,7 +217,7 @@ func Quiescence(board *dragontoothmg.Board, depth int, color int, alpha int, bet
 		promotion := move.Promote() != dragontoothmg.Nothing
 
 		if !(capture || promotion) {
-			continue
+			break // quiet moves are ordered last
 		} // only search captures and promotions
 
 		// Delta Pruning
