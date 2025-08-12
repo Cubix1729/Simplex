@@ -32,7 +32,7 @@ func LaunchUCI() {
 		input_single_space := strings.Join(input_split, " ")
 
 		if input == "uci" {
-			fmt.Println("id name SomeGoBot")
+			fmt.Println("id name Simplex")
 			fmt.Println("option name Use NNUE type check default false")
 			fmt.Println("option name Hash type spin default", DEFAULT_TT_SIZE, "min 1 max 1024")
 			fmt.Println("uciok")
@@ -41,8 +41,7 @@ func LaunchUCI() {
 		} else if input == "ucinewgame" {
 			game = dragontoothmg.ParseFen(dragontoothmg.Startpos)
 			ClearTT()
-			HistoryTable = [2][64][64]int{}           // reset the history table
-			KillerMoves = [30][2]dragontoothmg.Move{} // reset the killer moves table
+			HistoryTable = [2][64][64]int{} // reset the history table
 		} else if strings.HasPrefix(input, "position") {
 			if input_split[1] == "startpos" {
 				game = dragontoothmg.ParseFen(dragontoothmg.Startpos)

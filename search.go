@@ -9,13 +9,15 @@ import (
 	"github.com/dylhunn/dragontoothmg"
 )
 
+const MAX_PLY int = 250
+
 const MATE_SCORE = 20000
 
 var RepetitionTable = map[int]int{}
 
 var HistoryTable = [2][64][64]int{} // History table (for move ordering), indexed as [side2move][from][to]
 
-var KillerMoves = [30][2]dragontoothmg.Move{}
+var KillerMoves = [MAX_PLY][2]dragontoothmg.Move{}
 
 const NULL_MOVE_REDUCTION int = 2 // Depth reduction for null move pruning
 
@@ -383,6 +385,22 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 			continue
 		}
 
+		// extension := 0
+
+		// Singular Extensions, with Multi-Cut pruning
+		// if depth >= 8 && in_tt && move == tt_entry.BestMove && tt_entry.Depth >= depth-3 && excluded == 0 && tt_entry.Bound != Upper && !IsMateScore(tt_entry.Score) {
+		// 	singular_beta := tt_entry.Score - 6*depth
+		// 	singular_score := Negamax(board, (depth-1)/2, color, singular_beta-1, singular_beta, ply, false, num_ext, move)
+		// 	if singular_score < singular_beta {
+		// 		extension++
+		// 		num_ext++
+
+		// 		if !in_pv && singular_score < singular_beta-50 && num_ext <= 6 {
+		// 			extension = 2
+		// 		}
+		// 	}
+		// }
+
 		// Principal Variation Search + Late Move Reductions
 		unapply_func := PushMove(board, move)
 		if move_index == 0 {
@@ -610,7 +628,7 @@ func IterativeDeepening(board dragontoothmg.Board, time_allowed float64) dragont
 	start_time := time.Now()
 	depth := 1
 
-	KillerMoves = [30][2]dragontoothmg.Move{} // Reset killer moves before the search
+	KillerMoves = [MAX_PLY][2]dragontoothmg.Move{} // Reset killer moves before the search
 
 	last_score := Evaluate(&board)
 
