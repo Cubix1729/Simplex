@@ -32,6 +32,7 @@ By default, Simplex uses a small handcrafted evaluation function with:
      - Attacks near the king
      - King virtual mobility (as a queen)
  - Bishop pair bonus
+ - King-pawn tropism rewarding the king being close to friendly or ennemy pawns in the endgame
  - Tapered interpolation between middlegame/endgame scores for all features
 
 The eval parameters aren't tuned, so they are probably suboptimal.

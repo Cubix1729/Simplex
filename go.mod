@@ -1,4 +1,4 @@
-module go-chess
+module simplex
 
 go 1.24.4
 
