@@ -7,7 +7,7 @@
 
 Simplex is a (very) small mid-strength UCI chess engine written in Golang.
 
-To play against it, you can challenge [@SomeGoBot](lichess.org/@/SomeGoBot) on Lichess.
+To play against it, you can challenge [@SomeGoBot](https://lichess.org/@/SomeGoBot) on Lichess.
 
 ## Features
 
