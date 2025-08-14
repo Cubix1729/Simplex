@@ -368,16 +368,16 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 		// Used for futility pruning, so it takes into account the "lateness" of the move
 		// lmr_depth := max(1, depth-LMRTable[depth][move_index])
 
-		// Futility Pruning
-		if depth <= 2 && !in_check && !in_pv && !capture && !UseNNUE &&
-			!promotion && !IsMateScore(alpha) && !IsMateScore(beta) {
-			if eval+FUTILITY_MARGINS[depth-1] < alpha {
-				continue
-			}
-			// if eval+120+80*lmr_depth < alpha {
-			// 	continue
-			// }
-		}
+		// Futility Pruning (disabled for the moment, investigate why it loses Elo)
+		// if depth <= 2 && !in_check && !in_pv && !capture && !UseNNUE &&
+		// 	!promotion && !IsMateScore(alpha) && !IsMateScore(beta) {
+		// 	if eval+FUTILITY_MARGINS[depth-1] < alpha {
+		// 		continue
+		// 	}
+		// 	// if eval+120+80*lmr_depth < alpha {
+		// 	// 	continue
+		// 	// }
+		// }
 
 		// Late Move Pruning
 		// Skip very late quiet moves, as they are probably not good
