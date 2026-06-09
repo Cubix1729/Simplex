@@ -123,7 +123,7 @@ func MoveScore(board *dragontoothmg.Board, move dragontoothmg.Move, ply int, tt_
 }
 
 func OrderMoves(board *dragontoothmg.Board, moves []dragontoothmg.Move, ply int) []dragontoothmg.Move {
-	tt_entry, in_tt := GetTT(int(board.Hash()))
+	tt_entry, in_tt := GetTT(board.Hash())
 
 	slices.SortFunc(
 		moves,
@@ -281,7 +281,7 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 
 	board_hash := board.Hash()
 
-	tt_entry, in_tt := GetTT(int(board_hash))
+	tt_entry, in_tt := GetTT(board_hash)
 	// TT cutoff
 	if in_tt && tt_entry.Depth >= depth && RepetitionTable[int(board_hash)] < 2 {
 		if tt_entry.Bound == Exact ||
@@ -511,7 +511,7 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 	}
 
 	if (!in_tt || (in_tt && tt_entry.Depth <= depth) || (bound == Exact && tt_entry.Bound != Exact)) && best_move != 0 {
-		StoreTT(int(board_hash), best_move, max_val, depth, bound)
+		StoreTT(board_hash, best_move, max_val, depth, bound)
 	}
 
 	return max_val
@@ -581,7 +581,7 @@ func NegamaxRoot(board dragontoothmg.Board, depth int, alpha int, beta int, star
 			bound = Exact
 		}
 
-		StoreTT(int(board.Hash()), best_move, max_val, depth, bound)
+		StoreTT(board.Hash(), best_move, max_val, depth, bound)
 	}
 
 	return best_move, max_val
@@ -590,7 +590,7 @@ func NegamaxRoot(board dragontoothmg.Board, depth int, alpha int, beta int, star
 func GetPV(board dragontoothmg.Board, depth int) []dragontoothmg.Move {
 	pv := []dragontoothmg.Move{}
 	for i := 0; i < depth; i++ {
-		tt_entry, in_tt := GetTT(int(board.Hash()))
+		tt_entry, in_tt := GetTT(board.Hash())
 		if !in_tt || tt_entry.BestMove == 0 {
 			return pv
 		}
