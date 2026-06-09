@@ -17,7 +17,6 @@ func LaunchUCI() {
 	game := dragontoothmg.ParseFen(dragontoothmg.Startpos)
 
 	// Initialisation
-	Network.Load()
 	InitIndexTable()
 	InitLMReductionTable()
 	SetTTSize(DEFAULT_TT_SIZE)
@@ -95,6 +94,7 @@ func LaunchUCI() {
 			}
 			fmt.Println("bestmove", best_move.String())
 		} else if input_single_space == "setoption name Use NNUE value true" {
+			Network.Load()
 			UseNNUE = true
 		} else if strings.HasPrefix(input_single_space, "setoption name Hash value") {
 			hash_size, _ := strconv.Atoi(input_split[len(input_split)-1])
