@@ -26,7 +26,7 @@ func LaunchUCI() {
 		scanner.Scan()
 		input = scanner.Text()
 
-		input_split := strings.Split(input, " ")
+		input_split := strings.Fields(input)
 
 		input_single_space := strings.Join(input_split, " ")
 
@@ -101,6 +101,8 @@ func LaunchUCI() {
 			SetTTSize(hash_size)
 		} else if input == "quit" {
 			break
+		} else if input == "runtests" {
+			RunTacticalTests()
 		}
 	}
 }
