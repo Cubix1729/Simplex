@@ -92,6 +92,9 @@ func MoveScore(board *dragontoothmg.Board, move dragontoothmg.Move, ply int, tt_
 		victim, _ := dragontoothmg.GetPieceType(move.To(), board)
 		attacker, _ := dragontoothmg.GetPieceType(move.From(), board)
 		score += MG_PIECE_VALUES[victim]
+		if victim == dragontoothmg.Nothing {
+			score += MG_PIECE_VALUES[dragontoothmg.Pawn]
+		} // Special handling for en passant
 		if board.UnderDirectAttack(board.Wtomove, move.To()) {
 			score -= MG_PIECE_VALUES[attacker] / 10
 		} // Bonus for free pieces
@@ -404,11 +407,6 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 		// Principal Variation Search + Late Move Reductions
 		unapply_func := PushMove(board, move)
 		if move_index == 0 {
-			if move_index == 0 && in_pv {
-				in_pv = true
-			} else {
-				in_pv = false
-			}
 			value = -Negamax(board, depth-1, -color, -beta, -alpha, ply+1, in_pv, num_ext)
 		} else {
 			reduction := LMRTable[depth][move_index]
