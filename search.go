@@ -65,6 +65,10 @@ func UpdateHistory(side_to_move int, from uint8, to uint8, bonus int) {
 }
 
 func PushMove(board *dragontoothmg.Board, move dragontoothmg.Move) func() {
+	if UseNNUE {
+		PushAccum()
+		Network.Update(board, move)
+	}
 	unapply_func := board.Apply(move)
 	_, exists := RepetitionTable[int(board.Hash())]
 	if !exists {
@@ -78,6 +82,9 @@ func PushMove(board *dragontoothmg.Board, move dragontoothmg.Move) func() {
 func PopMove(board *dragontoothmg.Board, unapply_func func()) {
 	RepetitionTable[int(board.Hash())] -= 1
 	unapply_func()
+	if UseNNUE {
+		PopAccum()
+	}
 }
 
 var NodesSearched = 0 // initialise a node counter
@@ -199,7 +206,6 @@ func Quiescence(board *dragontoothmg.Board, depth int, color int, alpha int, bet
 
 	var stand_pat int
 	if UseNNUE {
-		Network.SetPosition(board)
 		stand_pat = Network.GetEval(board.Wtomove)
 	} else {
 		stand_pat = color * Evaluate(board)
@@ -634,9 +640,20 @@ func IterativeDeepening(board dragontoothmg.Board, time_allowed float64) dragont
 	start_time := time.Now()
 	depth := 1
 
+	// Set up and reset NNUE net
+	if UseNNUE {
+		Network.SetPosition(&board)
+		ResetAccumStack()
+	}
+
 	KillerMoves = [MAX_PLY][2]dragontoothmg.Move{} // Reset killer moves before the search
 
-	last_score := Evaluate(&board)
+	var last_score int
+	if UseNNUE {
+		last_score = Network.GetEval(board.Wtomove)
+	} else {
+		last_score = Evaluate(&board)
+	}
 
 	for {
 		var move dragontoothmg.Move

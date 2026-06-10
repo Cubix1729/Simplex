@@ -186,7 +186,7 @@ var GAME_PHASE_PIECE_VALUES = map[int]int{
 
 const MAX_PHASE = 24
 
-var KING_ATTACK_SCORE = [10]int{
+var KING_ATTACK_SCORE = [11]int{
 	0,
 	5,
 	15,
@@ -195,6 +195,7 @@ var KING_ATTACK_SCORE = [10]int{
 	55,
 	70,
 	90,
+	100,
 	100,
 	100,
 }

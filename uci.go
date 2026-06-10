@@ -10,11 +10,12 @@ import (
 	"github.com/dylhunn/dragontoothmg"
 )
 
-var UseNNUE bool = false
+var UseNNUE bool = true
 
 func LaunchUCI() {
 	var input string
 	game := dragontoothmg.ParseFen(dragontoothmg.Startpos)
+	Network.Load()
 
 	// Initialisation
 	InitIndexTable()
@@ -32,7 +33,7 @@ func LaunchUCI() {
 
 		if input == "uci" {
 			fmt.Println("id name Simplex")
-			fmt.Println("option name Use NNUE type check default false")
+			fmt.Println("option name Use NNUE type check default true")
 			fmt.Println("option name Hash type spin default", DEFAULT_TT_SIZE, "min 1 max 1024")
 			fmt.Println("uciok")
 		} else if input == "isready" {
@@ -41,7 +42,10 @@ func LaunchUCI() {
 			game = dragontoothmg.ParseFen(dragontoothmg.Startpos)
 			ClearTT()
 			HistoryTable = [2][64][64]int{} // reset the history table
+			ResetAccumStack()
 		} else if strings.HasPrefix(input, "position") {
+			oldUseNNUE := UseNNUE
+			UseNNUE = false // disable NNUE updates while pushing moves
 			if input_split[1] == "startpos" {
 				game = dragontoothmg.ParseFen(dragontoothmg.Startpos)
 				RepetitionTable = map[int]int{}
@@ -61,6 +65,7 @@ func LaunchUCI() {
 					}
 				}
 			}
+			UseNNUE = oldUseNNUE
 			Network.SetPosition(&game)
 		} else if strings.HasPrefix(input, "go") {
 			var think_time float64
@@ -93,8 +98,9 @@ func LaunchUCI() {
 				best_move = IterativeDeepening(game, think_time-0.01)
 			}
 			fmt.Println("bestmove", best_move.String())
+		} else if input_single_space == "setoption name Use NNUE value false" {
+			UseNNUE = false
 		} else if input_single_space == "setoption name Use NNUE value true" {
-			Network.Load()
 			UseNNUE = true
 		} else if strings.HasPrefix(input_single_space, "setoption name Hash value") {
 			hash_size, _ := strconv.Atoi(input_split[len(input_split)-1])

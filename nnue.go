@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/binary"
-	"os"
 
 	"github.com/dylhunn/dragontoothmg"
 )
 
-const NNUE_PATH = "./nnue-weights.bin"
+//go:embed nnue-weights.bin
+var NNUEData []byte
 
 const WHITE = 0
 const BLACK = 1
@@ -93,16 +95,22 @@ type NeuralNet struct {
 }
 
 func (n *NeuralNet) SetPosition(board *dragontoothmg.Board) {
-	white_vec := BoardToVector(board, WHITE)
-	black_vec := BoardToVector(board, BLACK)
+	// Reset to biases
+	n.WhiteAcc.Values = n.AccBiases
+	n.BlackAcc.Values = n.AccBiases
 
-	for i := 0; i < HL_SIZE; i++ {
-		n.WhiteAcc.Values[i] = n.AccBiases[i]
-		n.BlackAcc.Values[i] = n.AccBiases[i]
-		for j := 0; j < INPUT_SIZE; j++ {
-			n.WhiteAcc.Values[i] += int16(white_vec[j]) * n.AccWeights[j][i]
-			n.BlackAcc.Values[i] += int16(black_vec[j]) * n.AccWeights[j][i]
+	for square := uint8(0); square < 64; square++ {
+		piece, is_white := dragontoothmg.GetPieceType(square, board)
+		if piece == dragontoothmg.Nothing {
+			continue
 		}
+		color := GetColor(is_white)
+		n.WhiteAcc.AddFeature(
+			FeatIndexTable[square][piece-1][color][WHITE], n,
+		)
+		n.BlackAcc.AddFeature(
+			FeatIndexTable[square][piece-1][color][BLACK], n,
+		)
 	}
 }
 
@@ -116,56 +124,71 @@ func GetColor(is_white bool) int {
 }
 
 func (n *NeuralNet) Update(board *dragontoothmg.Board, move dragontoothmg.Move) {
-	// Remove 'from' piece
 	from_piece, is_white := dragontoothmg.GetPieceType(move.From(), board)
 	color := GetColor(is_white)
-	n.WhiteAcc.SubFeature(
-		int16(CalculateIndex(move.From(), from_piece, color, WHITE)), n,
-	)
-	n.BlackAcc.SubFeature(
-		int16(CalculateIndex(move.From(), from_piece, color, BLACK)), n,
-	)
 
-	// Add 'to' piece
-	var to_piece int
+	// Remove piece from source square
+	n.WhiteAcc.SubFeature(FeatIndexTable[move.From()][from_piece-1][color][WHITE], n)
+	n.BlackAcc.SubFeature(FeatIndexTable[move.From()][from_piece-1][color][BLACK], n)
+
+	// Determine what lands on the target square
+	to_piece := from_piece
 	if move.Promote() != dragontoothmg.Nothing {
 		to_piece = int(move.Promote())
-	} else {
-		to_piece = from_piece
 	}
-	n.WhiteAcc.AddFeature(
-		int16(CalculateIndex(move.To(), to_piece, color, WHITE)), n,
-	)
-	n.BlackAcc.AddFeature(
-		int16(CalculateIndex(move.To(), to_piece, color, BLACK)), n,
-	)
 
-	// Remove captured piece
+	// Add piece to target square
+	n.WhiteAcc.AddFeature(FeatIndexTable[move.To()][to_piece-1][color][WHITE], n)
+	n.BlackAcc.AddFeature(FeatIndexTable[move.To()][to_piece-1][color][BLACK], n)
+
+	// Handle capture
 	if dragontoothmg.IsCapture(move, board) {
-		to_bitmask := (uint64(1) << move.To())
-		if (to_bitmask&board.White.All != 0) || (to_bitmask&board.Black.All != 0) {
-			// Standard capture
+		to_bitmask := uint64(1) << move.To()
+		if to_bitmask&board.White.All != 0 || to_bitmask&board.Black.All != 0 {
 			captured_piece, _ := dragontoothmg.GetPieceType(move.To(), board)
-			n.WhiteAcc.SubFeature(
-				int16(CalculateIndex(move.To(), captured_piece, 1-color, WHITE)), n,
-			)
-			n.BlackAcc.SubFeature(
-				int16(CalculateIndex(move.To(), captured_piece, 1-color, BLACK)), n,
-			)
+			n.WhiteAcc.SubFeature(FeatIndexTable[move.To()][captured_piece-1][1-color][WHITE], n)
+			n.BlackAcc.SubFeature(FeatIndexTable[move.To()][captured_piece-1][1-color][BLACK], n)
 		} else {
-			// En passant capture
+			// En passant
 			var ep_square uint8
 			if color == WHITE {
 				ep_square = move.To() - 8
 			} else {
 				ep_square = move.To() + 8
 			}
-			n.WhiteAcc.SubFeature(
-				int16(CalculateIndex(ep_square, dragontoothmg.Pawn, 1-color, WHITE)), n,
-			)
-			n.BlackAcc.SubFeature(
-				int16(CalculateIndex(ep_square, dragontoothmg.Pawn, 1-color, BLACK)), n,
-			)
+			n.WhiteAcc.SubFeature(FeatIndexTable[ep_square][dragontoothmg.Pawn-1][1-color][WHITE], n)
+			n.BlackAcc.SubFeature(FeatIndexTable[ep_square][dragontoothmg.Pawn-1][1-color][BLACK], n)
+		}
+	}
+
+	// Handle castling — move the rook too
+	if from_piece == dragontoothmg.King {
+		var rookFrom, rookTo uint8
+		handled := true
+		switch move.To() {
+		case 6:
+			rookFrom, rookTo = 7, 5 // white kingside
+		case 2:
+			rookFrom, rookTo = 0, 3 // white queenside
+		case 62:
+			rookFrom, rookTo = 63, 61 // black kingside
+		case 58:
+			rookFrom, rookTo = 56, 59 // black queenside
+		default:
+			handled = false
+		}
+		// Only treat as castling if the king actually moved 2 squares
+		fromFile := move.From() % 8
+		toFile := move.To() % 8
+		diff := int(fromFile) - int(toFile)
+		if diff < 0 {
+			diff = -diff
+		}
+		if handled && diff == 2 {
+			n.WhiteAcc.SubFeature(FeatIndexTable[rookFrom][dragontoothmg.Rook-1][color][WHITE], n)
+			n.BlackAcc.SubFeature(FeatIndexTable[rookFrom][dragontoothmg.Rook-1][color][BLACK], n)
+			n.WhiteAcc.AddFeature(FeatIndexTable[rookTo][dragontoothmg.Rook-1][color][WHITE], n)
+			n.BlackAcc.AddFeature(FeatIndexTable[rookTo][dragontoothmg.Rook-1][color][BLACK], n)
 		}
 	}
 }
@@ -196,13 +219,8 @@ func (n *NeuralNet) GetEval(w_to_move bool) int {
 }
 
 func (n *NeuralNet) Load() {
-	// Open file
-	data, err := os.Open(NNUE_PATH)
-	if err != nil {
-		panic(err)
-	}
-
-	defer data.Close()
+	// Read stored data
+	data := bytes.NewReader(NNUEData)
 
 	// Load weights
 	var acc_weights [INPUT_SIZE * HL_SIZE]int16
@@ -217,4 +235,27 @@ func (n *NeuralNet) Load() {
 	}
 }
 
+type AccumulatorPair struct {
+	White Accumulator
+	Black Accumulator
+}
+
+var AccumStack [MAX_PLY]AccumulatorPair
+var AccumStackTop int = 0
+
 var Network = NeuralNet{}
+
+func PushAccum() {
+	AccumStack[AccumStackTop] = AccumulatorPair{Network.WhiteAcc, Network.BlackAcc}
+	AccumStackTop++
+}
+
+func PopAccum() {
+	AccumStackTop--
+	Network.WhiteAcc = AccumStack[AccumStackTop].White
+	Network.BlackAcc = AccumStack[AccumStackTop].Black
+}
+
+func ResetAccumStack() {
+	AccumStackTop = 0
+}
