@@ -302,8 +302,12 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 	}
 
 	var eval int
-	if !in_check && !in_pv && !UseNNUE {
-		eval = color * Evaluate(board)
+	if !in_check && !in_pv {
+		if UseNNUE {
+			eval = Network.GetEval(board.Wtomove)
+		} else {
+			eval = color * Evaluate(board)
+		}
 
 		// Reverse Futility Pruning
 		if eval >= beta+(RFP_MARGIN*depth) {
