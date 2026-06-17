@@ -437,6 +437,10 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 				reduction++
 			}
 
+			if move_index > 15 {
+				reduction++
+			}
+
 			reduction = max(1, min(reduction, depth-1))
 
 			if depth <= 2 {
