@@ -322,22 +322,17 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 			}
 		}
 
-		// num_pieces := popcount(board.White.All|board.Black.All) - 2 // Without kings
-		// num_pawns := popcount(board.White.Pawns | board.Black.Pawns)
-		// if num_pieces > num_pawns && depth >= 3 {
-		// 	board_fen := board.ToFen()
-		// 	var null_fen string
-		// 	if board.Wtomove {
-		// 		null_fen = strings.Replace(board_fen, " w ", " b ", 1)
-		// 	} else {
-		// 		null_fen = strings.Replace(board_fen, " b ", " w ", 1)
-		// 	}
-		// 	null_board := dragontoothmg.ParseFen(null_fen)
-		// 	score := -Negamax(&null_board, depth-1-NULL_MOVE_REDUCTION, -color, -beta, -(beta - 1), ply+1, false, num_ext)
-		// 	if score >= beta {
-		// 		return score
-		// 	}
-		// }
+		// Null move pruning (NMP)
+		num_pieces := popcount(board.White.All|board.Black.All) - 2 // Without kings
+		num_pawns := popcount(board.White.Pawns | board.Black.Pawns)
+		if num_pieces > num_pawns && num_pieces > 6 && depth >= 4 && eval >= beta {
+			unapply := board.ApplyNullMove()
+			score := -Negamax(board, depth-NULL_MOVE_REDUCTION-1, -color, -beta, -(beta - 1), ply+1, false, num_ext)
+			unapply()
+			if score >= beta {
+				return score
+			}
+		}
 	}
 
 	tt_is_capture := false
