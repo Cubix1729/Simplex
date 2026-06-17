@@ -1,9 +1,15 @@
-# Simplex Chess Engine
+<div align="center">
+ <h1>Simplex Chess Engine</h1>
+ <img src="https://upload.wikimedia.org/wikipedia/commons/6/6e/20-simplex_t0.svg" alt="Simplex Logo" width="30%">
+ <br/>
+ <br/>
+ <img src="https://lichess-shield.vercel.app/api?username=somegobot&format=bullet" alt="Lichess bullet rating">
+ <img src="https://lichess-shield.vercel.app/api?username=somegobot&format=blitz" alt="Lichess blitz rating">
+ <img src="https://lichess-shield.vercel.app/api?username=somegobot&format=rapid" alt="Lichess rapid rating">
+ <img src="https://lichess-shield.vercel.app/api?username=somegobot&format=classical" alt="Lichess classical rating">
+</div>
 
-[![Lichess bullet rating](https://lichess-shield.vercel.app/api?username=somegobot&format=bullet)](https://lichess.org/@/somegobot/perf/bullet)
-[![Lichess blitz rating](https://lichess-shield.vercel.app/api?username=somegobot&format=blitz)](https://lichess.org/@/somegobot/perf/blitz)
-[![Lichess rapid rating](https://lichess-shield.vercel.app/api?username=somegobot&format=rapid)](https://lichess.org/@/somegobot/perf/rapid)
-[![Lichess classical rating](https://lichess-shield.vercel.app/api?username=somegobot&format=classical)](https://lichess.org/@/somegobot/perf/classical)
+<br/>
 
 Simplex is a (very) small mid-strength UCI chess engine written in Golang.
 
@@ -13,14 +19,15 @@ To play against it, you can challenge [@SomeGoBot](https://lichess.org/@/SomeGoB
 
 ### Move generation
 
-The program uses the library [github.com/dylhunn/dragontoothmg](github.com/dylhunn/dragontoothmg)
+The program uses a very slightly modified version of the library [github.com/dylhunn/dragontoothmg](github.com/dylhunn/dragontoothmg),
+[github.com/Cubix1729/dragontoothmg](github.com/Cubix1729/dragontoothmg) (with added null move support)
 for move generation and board state handling.
-
-Yes, I know, this is a bit of cheating.
 
 ### Evaluation Function
 
-By default, Simplex uses a small handcrafted evaluation function with:
+By default, Simplex uses a small NNUE network (with architecture `768 -> 128 -> 1`).
+
+A HCE (handcrafted evaluation function) is also available, with the following features:
 
  - Material evaluation
  - Piece-square tables
@@ -35,10 +42,7 @@ By default, Simplex uses a small handcrafted evaluation function with:
  - King-pawn tropism rewarding the king being close to friendly or ennemy pawns in the endgame
  - Tapered interpolation between middlegame/endgame scores for all features
 
-The eval parameters aren't tuned, so they are probably suboptimal.
-
-The UCI option `Use NNUE` can be used to switch to the (very bad for the moment) NNUE evaluation.
-This is currently a lot too slow (~50x slower than the HCE), so still an experimental feature.
+The HCE eval parameters aren't tuned, so they are probably suboptimal.
 
 ### Search
 
@@ -65,7 +69,7 @@ This is currently a lot too slow (~50x slower than the HCE), so still an experim
 Simplex supports the UCI (Universal Chess Interface) protocol (at least the basic commands).
 It has only two UCI options:
 
- - `Use NNUE` to activate the experimental neural network evaluation
+ - `Use NNUE` to activate or deactivate the neural network evaluation
  - `Hash` to set the size of the transposition table (in MB)
 
 
