@@ -327,7 +327,7 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 		num_pawns := popcount(board.White.Pawns | board.Black.Pawns)
 		if num_pieces > num_pawns && num_pieces > 6 && depth >= 4 && eval >= beta {
 			unapply := board.ApplyNullMove()
-			score := -Negamax(board, depth-NULL_MOVE_REDUCTION-1, -color, -beta, -(beta - 1), ply+1, false, num_ext)
+			score := -Negamax(board, depth-NULL_MOVE_REDUCTION-depth/6-1, -color, -beta, -(beta - 1), ply+1, false, num_ext)
 			unapply()
 			if score >= beta {
 				return score
