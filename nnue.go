@@ -215,7 +215,7 @@ func (n *NeuralNet) GetEval(w_to_move bool) int {
 	eval *= SCALE
 	eval /= QA * QB
 
-	return eval
+	return eval / 2
 }
 
 func (n *NeuralNet) Load() {
