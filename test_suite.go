@@ -320,7 +320,10 @@ func RunTacticalTests() {
 		split := strings.Split(line, ":")
 		fen := split[0]
 		board := dragontoothmg.ParseFen(fen)
-		engine_move, _ := NegamaxRoot(board, 8, -MATE_SCORE, +MATE_SCORE, time.Now(), 1000)
+		SearchStart = time.Now()
+		SoftTimeLimit = 1000
+		HardTimeLimit = 1000
+		engine_move, _ := NegamaxRoot(board, 8, -MATE_SCORE, +MATE_SCORE)
 		best_move, _ := dragontoothmg.ParseMove(split[1])
 		if engine_move == best_move {
 			num_correct++

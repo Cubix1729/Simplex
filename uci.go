@@ -68,16 +68,18 @@ func LaunchUCI() {
 			UseNNUE = oldUseNNUE
 			Network.SetPosition(&game)
 		} else if strings.HasPrefix(input, "go") {
-			var think_time float64
 			if len(input_split) == 3 && input_split[1] == "movetime" {
-				think_time, _ = strconv.ParseFloat(input_split[2], 64)
+				movetime, _ := strconv.ParseFloat(input_split[2], 64)
+				HardTimeLimit = movetime
+				SoftTimeLimit = (2 * movetime) / 3
 			} else if len(input_split) == 5 && input_split[1] == "wtime" && input_split[3] == "btime" {
 				wtime, _ := strconv.ParseFloat(input_split[2], 64)
 				btime, _ := strconv.ParseFloat(input_split[4], 64)
 				if !game.Wtomove {
 					wtime = btime
 				}
-				think_time = max(min(wtime/55, wtime/2-1000), 20)
+				SoftTimeLimit = max(min(wtime/40, wtime/2-1000), 20)
+				HardTimeLimit = min(4*SoftTimeLimit, wtime/5)
 			} else if len(input_split) == 9 {
 				wtime, _ := strconv.ParseFloat(input_split[2], 64)
 				btime, _ := strconv.ParseFloat(input_split[4], 64)
@@ -87,15 +89,17 @@ func LaunchUCI() {
 					wtime = btime
 					winc = binc
 				}
-				think_time = max(min(wtime/55+winc/2, wtime/2-1000), 20)
+				SoftTimeLimit = max(min(wtime/40+winc*0.75, wtime/2-1000), 20)
+				HardTimeLimit = min(4*SoftTimeLimit, wtime/5+winc*0.8)
 			}
-			think_time /= 1000 // convert to seconds
+			SoftTimeLimit /= 1000 // convert to seconds
+			HardTimeLimit /= 1000
 			legal_moves := game.GenerateLegalMoves()
 			var best_move dragontoothmg.Move
 			if len(legal_moves) == 1 {
 				best_move = legal_moves[0]
 			} else {
-				best_move = IterativeDeepening(game, think_time-0.01)
+				best_move = IterativeDeepening(game)
 			}
 			fmt.Println("bestmove", best_move.String())
 		} else if input_single_space == "setoption name Use NNUE value false" {

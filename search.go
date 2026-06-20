@@ -9,6 +9,8 @@ import (
 	"github.com/dylhunn/dragontoothmg"
 )
 
+// Search constants and global variables
+
 const MAX_PLY int = 250
 
 const MATE_SCORE = 20000
@@ -34,6 +36,13 @@ const ASPIRATION_WINDOW int = 40
 const MAX_ASPIRATION_RESEARCHES int = 2 // 0 means aspiration search disabled
 
 var LMRTable = [100][150]int{}
+
+// Time management flags
+
+var SearchStopped bool = false
+var SearchStart time.Time
+var HardTimeLimit float64
+var SoftTimeLimit float64
 
 func InitLMReductionTable() {
 	for depth := 0; depth < 100; depth++ {
@@ -110,7 +119,7 @@ func MoveScore(board *dragontoothmg.Board, move dragontoothmg.Move, ply int, tt_
 		if board.Wtomove {
 			side_to_move = 1
 		}
-		score += HistoryTable[side_to_move][move.From()][move.To()] / 10
+		score += HistoryTable[side_to_move][move.From()][move.To()] / 10 // TODO: tweak history weight
 
 		if ply != 0 { // killer heuristic can be applied
 			switch move {
@@ -186,6 +195,17 @@ func CorrectMateScore(score int) int {
 func Quiescence(board *dragontoothmg.Board, depth int, color int, alpha int, beta int) int {
 	NodesSearched++ // increment the node counter
 
+	if NodesSearched&4095 == 0 {
+		if time.Since(SearchStart).Seconds() >= HardTimeLimit {
+			SearchStopped = true
+			return 0
+		}
+	}
+
+	if SearchStopped {
+		return 0
+	}
+
 	legal_moves := board.GenerateLegalMoves()
 
 	if len(legal_moves) == 0 {
@@ -259,6 +279,17 @@ func Quiescence(board *dragontoothmg.Board, depth int, color int, alpha int, bet
 
 func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta int, ply int, in_pv bool, num_ext int) int {
 	NodesSearched++ // increment the node counter
+
+	if NodesSearched&4095 == 0 {
+		if time.Since(SearchStart).Seconds() >= HardTimeLimit {
+			SearchStopped = true
+			return 0
+		}
+	}
+
+	if SearchStopped {
+		return 0
+	}
 
 	in_check := board.OurKingInCheck()
 
@@ -526,7 +557,7 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 	return max_val
 }
 
-func NegamaxRoot(board dragontoothmg.Board, depth int, alpha int, beta int, start_time time.Time, time_allowed float64) (dragontoothmg.Move, int) {
+func NegamaxRoot(board dragontoothmg.Board, depth int, alpha int, beta int) (dragontoothmg.Move, int) {
 	var color int
 	if board.Wtomove {
 		color = 1
@@ -542,8 +573,8 @@ func NegamaxRoot(board dragontoothmg.Board, depth int, alpha int, beta int, star
 	legal_moves := OrderMoves(&board, board.GenerateLegalMoves(), 0)
 
 	for move_index, move := range legal_moves {
-		if time.Since(start_time).Seconds() > 5*time_allowed && depth > 1 {
-			return best_move, max_val
+		if SearchStopped {
+			return 0, 0
 		}
 
 		var value int
@@ -609,7 +640,7 @@ func GetPV(board dragontoothmg.Board, depth int) []dragontoothmg.Move {
 	return pv
 }
 
-func AspirationSearch(board dragontoothmg.Board, depth int, last_score int, start_time time.Time, time_allowed float64) (dragontoothmg.Move, int) {
+func AspirationSearch(board dragontoothmg.Board, depth int, last_score int) (dragontoothmg.Move, int) {
 	var score int
 	var move dragontoothmg.Move
 	completed := false
@@ -617,7 +648,7 @@ func AspirationSearch(board dragontoothmg.Board, depth int, last_score int, star
 	alpha := last_score - ASPIRATION_WINDOW
 	beta := last_score + ASPIRATION_WINDOW
 	for i := 0; i < MAX_ASPIRATION_RESEARCHES; i++ {
-		move, score = NegamaxRoot(board, depth, alpha, beta, start_time, time_allowed)
+		move, score = NegamaxRoot(board, depth, alpha, beta)
 		if score <= alpha {
 			alpha -= ASPIRATION_WINDOW * (i + 2)
 		} else if score >= beta {
@@ -627,20 +658,21 @@ func AspirationSearch(board dragontoothmg.Board, depth int, last_score int, star
 			break
 		}
 
-		if time.Since(start_time).Seconds() > 5*time_allowed && depth > 1 {
-			return move, score // search was aborted
-		}
+		if SearchStopped {
+			return 0, 0
+		} // hard time limit
 	}
 	if !completed {
-		move, score = NegamaxRoot(board, depth, -MATE_SCORE, MATE_SCORE, start_time, time_allowed)
+		move, score = NegamaxRoot(board, depth, -MATE_SCORE, MATE_SCORE)
 	}
 	return move, score
 }
 
-func IterativeDeepening(board dragontoothmg.Board, time_allowed float64) dragontoothmg.Move {
-	NodesSearched = 0 // reset the node counter
+func IterativeDeepening(board dragontoothmg.Board) dragontoothmg.Move {
+	NodesSearched = 0     // reset the node counter
+	SearchStopped = false // reset the search interruption flag
 	var best_move dragontoothmg.Move
-	start_time := time.Now()
+	SearchStart = time.Now()
 	depth := 1
 
 	// Set up and reset NNUE net
@@ -662,22 +694,19 @@ func IterativeDeepening(board dragontoothmg.Board, time_allowed float64) dragont
 		var move dragontoothmg.Move
 		var score int
 
-		move, score = AspirationSearch(board, depth, last_score, start_time, time_allowed)
-		// if depth >= 7 {
-		// 	move, score = AspirationSearch(board, depth, last_score, start_time, time_allowed)
-		// } else {
-		// 	move, score = NegamaxRoot(board, depth, -MATE_SCORE, MATE_SCORE, start_time, time_allowed)
-		// }
+		// Idea to test: vary aspiration search with depth (maybe worth trying)
+		t_start := time.Now()
+		move, score = AspirationSearch(board, depth, last_score)
 
 		last_score = score
 
-		if move != 0 {
+		if move != 0 && !SearchStopped {
 			best_move = move
 		} else {
-			break // timeout before first move examined
+			break // timeout before first move examined or search interrupted
 		}
 
-		nps := int(float64(NodesSearched) / time.Since(start_time).Seconds())
+		nps := int(float64(NodesSearched) / time.Since(SearchStart).Seconds())
 
 		pv := GetPV(board, depth)
 		pv_str := ""
@@ -685,9 +714,12 @@ func IterativeDeepening(board dragontoothmg.Board, time_allowed float64) dragont
 			pv_str += move.String() + " "
 		}
 
-		fmt.Printf("info depth %v nodes %v nps %v score cp %v time %v pv %v\n", depth, NodesSearched, nps, score, time.Since(start_time).Milliseconds(), pv_str)
+		fmt.Printf(
+			"info depth %v nodes %v nps %v score cp %v time %v pv %v\n",
+			depth, NodesSearched, nps, score, time.Since(SearchStart).Milliseconds(), pv_str,
+		)
 
-		if time.Since(start_time).Seconds() >= time_allowed ||
+		if time.Since(SearchStart).Seconds()+time.Since(t_start).Seconds() >= SoftTimeLimit ||
 			depth == 20 ||
 			IsMateScore(score) {
 			break
@@ -696,7 +728,7 @@ func IterativeDeepening(board dragontoothmg.Board, time_allowed float64) dragont
 		depth++
 	}
 
-	// DecayHistoryTable()
+	// DecayHistoryTable() // TODO: maybe try again?
 
 	return best_move
 }
