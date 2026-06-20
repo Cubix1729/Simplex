@@ -25,7 +25,7 @@ for move generation and board state handling.
 
 ### Evaluation Function
 
-By default, Simplex uses a small NNUE network (with architecture `(768 -> 128)x2 -> 1`, and activation function CReLU).
+By default, Simplex uses a small NNUE network (with architecture `(768 -> 128)x2 -> 1`, and activation function SCReLU).
 
 A HCE (handcrafted evaluation function) is also available, with the following features:
 

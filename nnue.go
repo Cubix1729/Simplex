@@ -43,14 +43,14 @@ func InitIndexTable() {
 	}
 }
 
-func CReLu(x int16) int16 {
+func SCReLu(x int16) int32 {
 	if x <= 0 {
-		return 0
+		x = 0
 	}
 	if x >= QA {
-		return QA
+		x = QA
 	}
-	return x
+	return int32(x) * int32(x)
 }
 
 func BoardToVector(board *dragontoothmg.Board, perspective int) [768]int16 {
@@ -207,8 +207,12 @@ func (n *NeuralNet) GetEval(w_to_move bool) int {
 	eval := 0
 
 	for i := 0; i < HL_SIZE; i++ {
-		eval += int(CReLu(stm_acc.Values[i])*n.OutWeights[i] + CReLu(nstm_acc.Values[i])*n.OutWeights[i+HL_SIZE])
+		eval += int(
+			SCReLu(stm_acc.Values[i])*int32(n.OutWeights[i]) + SCReLu(nstm_acc.Values[i])*int32(n.OutWeights[i+HL_SIZE]),
+		)
 	}
+
+	eval /= QA
 
 	eval += int(n.OutBias)
 
