@@ -720,7 +720,7 @@ func IterativeDeepening(board dragontoothmg.Board) dragontoothmg.Move {
 		)
 
 		if time.Since(SearchStart).Seconds()+time.Since(t_start).Seconds() >= SoftTimeLimit ||
-			depth == 20 ||
+			depth >= 50 ||
 			IsMateScore(score) {
 			break
 		}
