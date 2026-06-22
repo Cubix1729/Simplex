@@ -392,7 +392,7 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 	// If there is no TT move and we are in a PV node, we run a reduced-depth search to
 	// have a hash move to order first, thus improving the move ordering
 	// if !in_tt && in_pv && depth > 5 {
-	// 	Negamax(board, (depth-1)/2, -color, -beta, -alpha, ply+1, false, num_ext)
+	// 	Negamax(board, (depth-1)/2, color, alpha, beta, ply, false, num_ext)
 	// }
 
 	original_alpha := alpha

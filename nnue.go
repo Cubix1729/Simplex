@@ -194,14 +194,14 @@ func (n *NeuralNet) Update(board *dragontoothmg.Board, move dragontoothmg.Move) 
 }
 
 func (n *NeuralNet) GetEval(w_to_move bool) int {
-	var stm_acc Accumulator
-	var nstm_acc Accumulator
+	var stm_acc *Accumulator
+	var nstm_acc *Accumulator
 	if w_to_move {
-		stm_acc = n.WhiteAcc
-		nstm_acc = n.BlackAcc
+		stm_acc = &n.WhiteAcc
+		nstm_acc = &n.BlackAcc
 	} else {
-		stm_acc = n.BlackAcc
-		nstm_acc = n.WhiteAcc
+		stm_acc = &n.BlackAcc
+		nstm_acc = &n.WhiteAcc
 	}
 
 	eval := 0
