@@ -138,6 +138,11 @@ func MoveScore(board *dragontoothmg.Board, move dragontoothmg.Move, ply int, tt_
 	return score
 }
 
+type ScoredMove struct {
+	Move  dragontoothmg.Move
+	Score int
+}
+
 func OrderMoves(board *dragontoothmg.Board, moves []dragontoothmg.Move, ply int) []dragontoothmg.Move {
 	tt_entry, in_tt := GetTT(board.Hash())
 
@@ -165,16 +170,6 @@ func MoveScoreQS(board *dragontoothmg.Board, move dragontoothmg.Move) int {
 	}
 
 	return score
-}
-
-// Move ordering for quiescence search
-func OrderMovesQS(board *dragontoothmg.Board, moves []dragontoothmg.Move) []dragontoothmg.Move {
-	slices.SortFunc(
-		moves,
-		func(a, b dragontoothmg.Move) int {
-			return MoveScoreQS(board, b) - MoveScoreQS(board, a)
-		})
-	return moves
 }
 
 // Checks whether the score corresponds to a "mate in N" value
@@ -239,11 +234,27 @@ func Quiescence(board *dragontoothmg.Board, depth int, color int, alpha int, bet
 		alpha = stand_pat
 	}
 
-	legal_moves = OrderMovesQS(board, legal_moves)
-
 	max_val := stand_pat
 
-	for _, move := range legal_moves {
+	scored := make([]ScoredMove, len(legal_moves))
+	for i, move := range legal_moves {
+		scored[i] = ScoredMove{
+			Move:  move,
+			Score: MoveScoreQS(board, move),
+		}
+	}
+
+	for move_index := 0; move_index < len(scored); move_index++ {
+		best := move_index
+
+		for j := move_index + 1; j < len(scored); j++ {
+			if scored[j].Score > scored[best].Score {
+				best = j
+			}
+		}
+		scored[best], scored[move_index] = scored[move_index], scored[best]
+		move := scored[move_index].Move
+
 		capture := dragontoothmg.IsCapture(move, board)
 		promotion := move.Promote() != dragontoothmg.Nothing
 
@@ -389,10 +400,28 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 	max_val := -MATE_SCORE
 	var best_move dragontoothmg.Move
 
-	legal_moves = OrderMoves(board, legal_moves, ply)
+	scored := make([]ScoredMove, len(legal_moves))
 
-	for move_index, move := range legal_moves {
+	for i, move := range legal_moves {
+		scored[i] = ScoredMove{
+			Move:  move,
+			Score: MoveScore(board, move, ply, tt_entry, in_tt),
+		}
+	}
+
+	for move_index := 0; move_index < len(scored); move_index++ {
 		var value int
+
+		best := move_index
+
+		for j := move_index + 1; j < len(scored); j++ {
+			if scored[j].Score > scored[best].Score {
+				best = j
+			}
+		}
+
+		scored[best], scored[move_index] = scored[move_index], scored[best]
+		move := scored[move_index].Move
 
 		capture := dragontoothmg.IsCapture(move, board)
 		promotion := move.Promote() != dragontoothmg.Nothing
@@ -511,10 +540,12 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 				UpdateHistory(side_to_move, move.From(), move.To(), bonus)
 
 				// History malus for previously searched quiet moves
-				for _, prev_move := range legal_moves {
+				for j := 0; j < move_index; j++ {
+					prev_move := scored[j].Move
 					if prev_move == move {
 						break
 					}
+
 					if dragontoothmg.IsCapture(prev_move, board) {
 						continue
 					}
