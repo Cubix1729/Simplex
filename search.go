@@ -25,17 +25,27 @@ const NULL_MOVE_REDUCTION int = 2 // Depth reduction for null move pruning
 
 const MAX_HISTORY int = 1000 // Maximum history table value
 
-const RFP_MARGIN int = 150
-
-const RAZOR_MARGIN int = 240
-
 var FUTILITY_MARGINS = [2]int{300, 500}
-
-const ASPIRATION_WINDOW int = 40
 
 const MAX_ASPIRATION_RESEARCHES int = 2 // 0 means aspiration search disabled
 
 var LMRTable = [100][150]int{}
+
+// Tunable parameters
+
+var RFP_MARGIN int = 150
+
+var RAZOR_MARGIN int = 240
+
+var ASPIRATION_WINDOW int = 40
+
+var KILLER1_SCORE int = 150
+
+var KILLER2_SCORE int = 120
+
+var LMR_BASE float64 = 1.5
+
+var LMR_DIV float64 = 2.0
 
 // Time management flags
 
@@ -48,7 +58,7 @@ func InitLMReductionTable() {
 	for depth := 0; depth < 100; depth++ {
 		for idx := 0; idx < 150; idx++ {
 			// LMRTable[i][j] = min(int(0.77+math.Log(float64(i))*math.Log(float64(j))/2.36), i-1)
-			LMRTable[depth][idx] = int(1.5 + math.Log(float64(depth))*math.Log(float64(idx+1))/2)
+			LMRTable[depth][idx] = int(LMR_BASE + math.Log(float64(depth))*math.Log(float64(idx+1))/LMR_DIV)
 		}
 	}
 }
@@ -124,9 +134,9 @@ func MoveScore(board *dragontoothmg.Board, move dragontoothmg.Move, ply int, tt_
 		if ply != 0 { // killer heuristic can be applied
 			switch move {
 			case KillerMoves[ply][0]:
-				score += 150
+				score += KILLER1_SCORE
 			case KillerMoves[ply][1]:
-				score += 120
+				score += KILLER2_SCORE
 			}
 		}
 	}

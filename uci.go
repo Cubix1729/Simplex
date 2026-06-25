@@ -106,9 +106,31 @@ func LaunchUCI() {
 			UseNNUE = false
 		} else if input_single_space == "setoption name Use NNUE value true" {
 			UseNNUE = true
-		} else if strings.HasPrefix(input_single_space, "setoption name Hash value") {
-			hash_size, _ := strconv.Atoi(input_split[len(input_split)-1])
-			SetTTSize(hash_size)
+		} else if strings.HasPrefix(input_single_space, "setoption name") {
+			name := input_split[2]
+			value := input_split[4]
+
+			switch name {
+			case "Hash":
+				hash_size, _ := strconv.Atoi(value)
+				SetTTSize(hash_size)
+			case "RFPMargin":
+				RFP_MARGIN, _ = strconv.Atoi(value)
+			case "RazorMargin":
+				RAZOR_MARGIN, _ = strconv.Atoi(value)
+			case "AspirationWindow":
+				ASPIRATION_WINDOW, _ = strconv.Atoi(value)
+			case "Killer1Score":
+				KILLER1_SCORE, _ = strconv.Atoi(value)
+			case "Killer2Score":
+				KILLER2_SCORE, _ = strconv.Atoi(value)
+			case "LMRBase":
+				LMR_BASE, _ = strconv.ParseFloat(value, 64)
+				InitLMReductionTable()
+			case "LMRDiv":
+				LMR_DIV, _ = strconv.ParseFloat(value, 64)
+				InitLMReductionTable()
+			}
 		} else if input == "quit" {
 			break
 		} else if input == "runtests" {
