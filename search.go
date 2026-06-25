@@ -25,8 +25,6 @@ const NULL_MOVE_REDUCTION int = 2 // Depth reduction for null move pruning
 
 const MAX_HISTORY int = 1000 // Maximum history table value
 
-var FUTILITY_MARGINS = [2]int{300, 500}
-
 const MAX_ASPIRATION_RESEARCHES int = 2 // 0 means aspiration search disabled
 
 var LMRTable = [100][150]int{}
@@ -447,9 +445,9 @@ func Negamax(board *dragontoothmg.Board, depth int, color int, alpha int, beta i
 		// lmr_depth := max(1, depth-LMRTable[depth][move_index])
 
 		// Futility Pruning
-		if depth <= 2 && !in_check && !in_pv && !capture &&
+		if depth <= 3 && !in_check && !in_pv && !capture &&
 			!promotion && !IsMateScore(alpha) && !IsMateScore(beta) {
-			if eval+FUTILITY_MARGINS[depth-1] < alpha {
+			if eval+50+150*depth < alpha {
 				continue
 			}
 			// if eval+120+80*lmr_depth < alpha {
